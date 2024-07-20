@@ -1,0 +1,12 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ke-the-coder
+
+//@version=5
+indicator("High Time Frame EMAs", shorttitle = "HTF EMAs", overlay = true)
+
+plot(ta.ema(close, 20), title="EMA20", color=color.blue, offset=0)
+// plot(na, title="EMA", color=#f1831c75, offset=0, linewidth=3)
+plot(timeframe.in_seconds()/60 < 60 ? request.security(syminfo.tickerid, "60", ta.ema(close, 20), barmerge.gaps_on) : na, title="EMA20 60mins", color=#f1831c75, offset=0, linewidth=2)
+plot(timeframe.period != "D" ? request.security(syminfo.tickerid, "D", ta.ema(close, 20), barmerge.gaps_on) : na, title="EMA20 1 day", color=#8b0e0ea3, offset=0, linewidth=3)
+
+plot(timeframe.in_seconds()/60 >= 60 and timeframe.period != "W" ? request.security(syminfo.tickerid, "W", ta.ema(close, 20), barmerge.gaps_on) : na, title="EMA20 1 week", color=#652ccea3, offset=0, linewidth=3)

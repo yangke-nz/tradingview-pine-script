@@ -1,1 +1,0 @@
-label_day = label.new(bar_index, 0, style=label.style_none, text=str.format("{0,time,d \n MMM}", time))
