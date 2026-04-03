@@ -4,10 +4,15 @@
 //@version=6
 indicator("HTF EMAs", shorttitle = "HTF EMAs", overlay = true)
 
-plot(ta.ema(close, 20), title="EMA20", color=color.blue, offset=0)
-// plot(na, title="EMA", color=#f1831c75, offset=0, linewidth=3)
-plot(timeframe.in_seconds() / 60 < 60 ? request.security(syminfo.tickerid, '60', ta.ema(close, 20), barmerge.gaps_off) : na, title='EMA20 60mins', color=#f1831c75, offset=0, linewidth=2)
+ema20 = ta.ema(close, 20)
 
-plot(timeframe.in_seconds() < 24 * 60 * 60 ? request.security(syminfo.tickerid, 'D', ta.ema(close, 20), barmerge.gaps_off) : na, title='EMA20 1 day', color=#8b0e0ea3, offset=0, linewidth=3)
+// gaps_on lets plot() draw a straight line between HTF values (linear interpolation),
+// which looks smooth. gaps_off would repeat the last value flat, creating a stairstep.
+ema20_1h = timeframe.in_seconds() / 60 < 60 ? request.security(syminfo.tickerid, '60', ema20, barmerge.gaps_on) : na
+ema20_d  = timeframe.in_seconds() < 24 * 60 * 60 ? request.security(syminfo.tickerid, 'D', ema20, barmerge.gaps_on) : na
+ema20_w  = timeframe.period != 'W' and timeframe.period != 'M' ? request.security(syminfo.tickerid, 'W', ema20, barmerge.gaps_on) : na
 
-plot(timeframe.period != 'W' and timeframe.period != 'M' ? request.security(syminfo.tickerid, 'W', ta.ema(close, 20), barmerge.gaps_off) : na, title='EMA20 1 week', color=#652ccea3, offset=0, linewidth=3)
+plot(ema20,    title = 'EMA 20',      color = color.blue, offset = 0)
+plot(ema20_1h, title = 'EMA 20 (1H)', color = #f1831c75,  offset = 0, linewidth = 2)
+plot(ema20_d,  title = 'EMA 20 (D)',  color = #8b0e0ea3,  offset = 0, linewidth = 3)
+plot(ema20_w,  title = 'EMA 20 (W)',  color = #652ccea3,  offset = 0, linewidth = 3)
