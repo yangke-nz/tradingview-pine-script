@@ -41,6 +41,16 @@ ema20_d = not na(ema20_d_prev) and not na(ema20_d_now) ? ema20_d_prev + (ema20_d
 ema20_w = timeframe.in_seconds() / 60 >= 60 and timeframe.period != 'W' ? request.security(syminfo.tickerid, 'W', ta.ema(close, 20), barmerge.gaps_on) : na
 avgBarSize = ta.sma(high - low, 20)
 
+var float day_high = na
+var float day_low  = na
+if new_day
+    day_high := high
+    day_low  := low
+else
+    day_high := math.max(day_high, high)
+    day_low  := math.min(day_low,  low)
+day_range = day_high - day_low
+
 plot(ema20,    title = 'EMA 20',      color = color.blue, offset = 0, linewidth = 1, display = display.pane)
 plot(ema20_1h, title = 'EMA 20 (1H)', color = #f1831c75,  offset = 0, linewidth = 2, display = display.pane)
 plot(ema20_d, title = 'EMA 20 (D)', color = #8b0e0ea3, offset = 0, linewidth = 3, display = display.pane)
@@ -50,4 +60,4 @@ var label lbl_avg = na
 
 if barstate.islast
     label.delete(lbl_avg)
-    lbl_avg := label.new(bar_index, low - avgBarSize * 5, text = 'Avg Bar  ' + str.tostring(avgBarSize, format.mintick), style = label.style_label_up, color = #555555, textcolor = color.white, size = size.small)
+    lbl_avg := label.new(bar_index, low - avgBarSize * 3, text = 'Avg Bar  ' + str.tostring(avgBarSize, format.mintick) + '\nDay Range  ' + str.tostring(day_range, format.mintick), style = label.style_label_up, color = #555555, textcolor = color.white, size = size.small)
