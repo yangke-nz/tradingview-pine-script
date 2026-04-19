@@ -5,27 +5,33 @@
 indicator('Day Trade — Bar Counter & EMAs', shorttitle = 'Day Trade', overlay = true, max_labels_count = 500)
 
 
+// --- Inputs ---
 displayEveryBars = input.int(3, title = 'Display every N bars', minval = 1)
 
+// --- Day detection ---
 is_new_day() =>
     d = dayofweek
     na(d[1]) or d != d[1]
 
+// --- Bar counting ---
+// Counts bars within each trading day; resets to 1 on a new day.
 var count = 1
 new_day = is_new_day()
 
 count := new_day ? 1 : count + 1
 
+// Display date label on the first bar of each day; show bar count every N bars.
 if count == 1
     label.new(bar_index, 0, style = label.style_none, text = str.format('{0,time,d \n MMM}', time), yloc = yloc.belowbar, textcolor = #ffffffa9, size = size.small)
 else if count % displayEveryBars == 0
     label.new(bar_index, 0, style = label.style_none, text = str.tostring(count), yloc = yloc.belowbar, textcolor = #4caf4fb9, size = size.normal)
 
 
+// --- EMA calculations ---
 ema20 = ta.ema(close, 20)
-ema20_1h = timeframe.in_seconds() / 60 < 60 ? request.security(syminfo.tickerid, '60', ema20, barmerge.gaps_on) : na
-ema20_d_now  = timeframe.period != 'D' ? request.security(syminfo.tickerid, 'D', ta.ema(close, 20), barmerge.gaps_off, barmerge.lookahead_on) : na
-ema20_d_prev = timeframe.period != 'D' ? request.security(syminfo.tickerid, 'D', ta.ema(close, 20)[1], barmerge.gaps_off) : na
+ema20_1h = timeframe.in_seconds() / 60 < 60 ? request.security(syminfo.tickerid, '60', ema20, barmerge.gaps_on) : na        // 1-hour EMA 20 (only on sub-60m timeframes)
+ema20_d_now  = timeframe.period != 'D' ? request.security(syminfo.tickerid, 'D', ta.ema(close, 20), barmerge.gaps_off, barmerge.lookahead_on) : na   // today's projected daily EMA 20
+ema20_d_prev = timeframe.period != 'D' ? request.security(syminfo.tickerid, 'D', ta.ema(close, 20)[1], barmerge.gaps_off) : na                       // yesterday's settled daily EMA 20
 
 // Track how many bars were in the previous day to normalise intraday progress.
 // Default 78 assumes a 6.5h session at 5-min bars (6.5 * 60 / 5 = 78).
@@ -38,9 +44,10 @@ if new_day and count[1] > 1
 t       = math.min(float(count) / float(bars_in_prev_day), 1.0)
 t_curve = (1 - math.cos(t * math.pi)) / 2
 ema20_d = not na(ema20_d_prev) and not na(ema20_d_now) ? ema20_d_prev + (ema20_d_now - ema20_d_prev) * t_curve : ema20_d_now
-ema20_w = timeframe.in_seconds() / 60 >= 60 and timeframe.period != 'W' ? request.security(syminfo.tickerid, 'W', ta.ema(close, 20), barmerge.gaps_on) : na
-avgBarSize = ta.sma(high - low, 20)
+ema20_w = timeframe.in_seconds() / 60 >= 60 and timeframe.period != 'W' ? request.security(syminfo.tickerid, 'W', ta.ema(close, 20), barmerge.gaps_on) : na  // weekly EMA 20 (only on >= 60m timeframes)
+avgBarSize = ta.sma(high - low, 20)  // average bar size (high-low) over last 20 bars
 
+// --- Day high/low tracking ---
 var float day_high = na
 var float day_low  = na
 if new_day
@@ -51,13 +58,21 @@ else
     day_low  := math.min(day_low,  low)
 day_range = day_high - day_low
 
+// --- Plot EMAs ---
 plot(ema20,    title = 'EMA 20',      color = color.blue, offset = 0, linewidth = 1, display = display.pane)
 plot(ema20_1h, title = 'EMA 20 (1H)', color = #f1831c75,  offset = 0, linewidth = 2, display = display.pane)
 plot(ema20_d, title = 'EMA 20 (D)', color = #8b0e0ea3, offset = 0, linewidth = 3, display = display.pane)
 plot(ema20_w, title = 'EMA 20 (W)', color = #652ccea3, offset = 0, linewidth = 3, display = display.pane)
 
+// --- Info label on the 2nd last bar ---
 var label lbl_avg = na
 
 if barstate.islast
     label.delete(lbl_avg)
-    lbl_avg := label.new(bar_index, low - avgBarSize * 3, text = 'Avg Bar  ' + str.tostring(avgBarSize, format.mintick) + '\nDay Range  ' + str.tostring(day_range, format.mintick), style = label.style_label_up, color = #555555, textcolor = color.white, size = size.small)
+    barSize = high[1] - low[1]
+    lblText = 'Avg Bar  ' + str.tostring(avgBarSize, format.mintick)
+      + '\nBar Size  ' + str.tostring(barSize, format.mintick)
+      + '\nDay Range  ' + str.tostring(day_range, format.mintick)
+    lbl_avg := label.new(bar_index - 1, low[1] - avgBarSize * 3,
+      text = lblText, style = label.style_label_up,
+      color = #555555, textcolor = color.white, size = size.small)
